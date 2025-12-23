@@ -51,15 +51,15 @@ export default function TeamDetail() {
 
   return (
     <div className="px-4 py-6 sm:px-0">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">{team.name}</h2>
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{team.name}</h2>
         {team.description && (
-          <p className="mt-2 text-gray-600">{team.description}</p>
+          <p className="text-base text-gray-600 dark:text-gray-400">{team.description}</p>
         )}
       </div>
 
       {/* Create Note Form */}
-      <div className="bg-white shadow rounded-lg p-6 mb-6">
+      <div className="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 mb-6 border border-gray-200 dark:border-gray-700">
         <h3 className="text-lg font-medium text-gray-900 mb-4">
           Add a Note
         </h3>
