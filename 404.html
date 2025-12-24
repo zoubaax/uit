@@ -6,6 +6,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>uit</title>
     <script>
+      // Handle GitHub Pages SPA redirect
+      (function() {
+        var pathSegmentsToKeep = 1; // Keep /uit
+        var l = window.location;
+        if (l.search[1] === '/' ) {
+          var decoded = l.search.slice(1).split('&').map(function(s) { 
+            return s.replace(/~and~/g, '&');
+          }).join('?');
+          window.history.replaceState(null, null,
+              l.pathname.slice(0, -1) + decoded + l.hash
+          );
+        }
+      })();
+      
       // Apply theme before React hydration to prevent flash
       (function() {
         const savedTheme = localStorage.getItem('theme');
@@ -23,10 +37,26 @@
         document.documentElement.setAttribute('data-theme', theme);
       })();
     </script>
-    <script type="module" crossorigin src="/uit/assets/index-BZ3LybOL.js"></script>
+    <script type="module" crossorigin src="/uit/assets/index-BQEmIyrO.js"></script>
     <link rel="stylesheet" crossorigin href="/uit/assets/index-BUMXhWJ5.css">
   </head>
   <body>
+    <script>
+      // Single Page Apps for GitHub Pages
+      // https://github.com/rafgraph/spa-github-pages
+      (function() {
+        var pathSegmentsToKeep = 1; // Keep /uit
+        var l = window.location;
+        l.replace(
+          l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+          l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
+          l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
+          (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+          l.hash
+        );
+      })();
+    </script>
+  
     <div id="root"></div>
   </body>
 </html>
