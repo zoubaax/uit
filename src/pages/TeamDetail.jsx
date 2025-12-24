@@ -24,11 +24,11 @@ export default function TeamDetail() {
 
   if (teamLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-blue-100 dark:from-gray-900 dark:via-blue-950 dark:to-gray-950 px-4 py-8 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-950 to-gray-950 px-4 py-8 sm:px-6 lg:px-8">
         <div className="max-w-5xl mx-auto">
           <div className="text-center py-20">
-            <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-blue-200 dark:border-blue-800 border-t-blue-600 dark:border-t-blue-400"></div>
-            <p className="mt-6 text-lg text-gray-600 dark:text-gray-400 font-medium">Loading team...</p>
+            <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-blue-800 border-t-blue-400"></div>
+            <p className="mt-6 text-lg text-gray-400 font-medium">Loading team...</p>
           </div>
         </div>
       </div>
@@ -37,15 +37,15 @@ export default function TeamDetail() {
 
   if (!team) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-blue-100 dark:from-gray-900 dark:via-blue-950 dark:to-gray-950 px-4 py-8 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-950 to-gray-950 px-4 py-8 sm:px-6 lg:px-8">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center py-20 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-3xl shadow-xl border-2 border-blue-200 dark:border-blue-900/50">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-100 dark:bg-blue-900/30 mb-6">
-              <svg className="w-10 h-10 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="text-center py-20 bg-gray-800/90 backdrop-blur-sm rounded-3xl shadow-xl border-2 border-blue-900/50">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-900/30 mb-6">
+              <svg className="w-10 h-10 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <p className="text-xl text-gray-700 dark:text-gray-300 font-semibold">Team not found.</p>
+            <p className="text-xl text-gray-300 font-semibold">Team not found.</p>
           </div>
         </div>
       </div>
@@ -53,11 +53,11 @@ export default function TeamDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-blue-100 dark:from-gray-900 dark:via-blue-950 dark:to-gray-950 px-4 py-8 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-950 to-gray-950 px-4 py-8 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
         {/* Team Header */}
-        <div className="mb-8 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-3xl shadow-2xl border-2 border-blue-200 dark:border-blue-900/50 overflow-hidden">
-          <div className="bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 dark:from-blue-600 dark:via-indigo-700 dark:to-blue-800 p-8">
+        <div className="mb-8 bg-gray-800/90 backdrop-blur-sm rounded-3xl shadow-2xl border-2 border-blue-900/50 overflow-hidden">
+          <div className="bg-gradient-to-br from-blue-600 via-indigo-700 to-blue-800 p-8">
             <div className="flex items-center gap-6 mb-4">
               {team.logo_url ? (
                 <img
@@ -80,7 +80,7 @@ export default function TeamDetail() {
               </div>
             </div>
             {team.description && (
-              <p className="text-lg text-blue-50 dark:text-blue-100 mb-4 leading-relaxed">{team.description}</p>
+              <p className="text-lg text-blue-100 mb-4 leading-relaxed">{team.description}</p>
             )}
             <div className="flex flex-wrap gap-3">
               {team.score !== null && team.score !== undefined && (
@@ -138,34 +138,34 @@ export default function TeamDetail() {
 
         {/* Team Members Section */}
         {members.length > 0 && (
-        <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-2xl rounded-3xl p-8 mb-8 border-2 border-blue-200 dark:border-blue-900/50">
+        <div className="bg-gray-800/90 backdrop-blur-sm shadow-2xl rounded-3xl p-8 mb-8 border-2 border-blue-900/50">
           <div className="flex items-center mb-6">
             <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl mr-4 shadow-lg">
               <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Team Members <span className="text-blue-600 dark:text-blue-400">({members.length})</span>
+            <h3 className="text-2xl font-bold text-white">
+              Team Members <span className="text-blue-400">({members.length})</span>
             </h3>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {members.map((member) => (
-              <div key={member.id} className="flex items-center p-5 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border-2 border-blue-100 dark:border-blue-800/50 hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-lg transition-all group">
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg mr-4 shadow-md ring-2 ring-blue-200 dark:ring-blue-800">
+              <div key={member.id} className="flex items-center p-5 bg-gradient-to-r from-blue-900/20 to-indigo-900/20 rounded-xl border-2 border-blue-800/50 hover:border-blue-600 hover:shadow-lg transition-all group">
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg mr-4 shadow-md ring-2 ring-blue-800">
                   {member.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-bold text-gray-900 dark:text-white truncate text-lg">
+                  <h4 className="font-bold text-white truncate text-lg">
                     {member.name}
                   </h4>
                   {member.role && (
-                    <p className="text-sm text-blue-600 dark:text-blue-400 truncate font-semibold mt-1">
+                    <p className="text-sm text-blue-400 truncate font-semibold mt-1">
                       {member.role}
                     </p>
                   )}
                   {member.email && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-1">
+                    <p className="text-xs text-gray-400 truncate mt-1">
                       {member.email}
                     </p>
                   )}
@@ -179,23 +179,23 @@ export default function TeamDetail() {
         {/* Notes List */}
         <div className="space-y-6">
         {notesLoading ? (
-          <div className="text-center py-16 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-3xl shadow-xl border-2 border-blue-200 dark:border-blue-900/50">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-200 dark:border-blue-800 border-t-blue-600 dark:border-t-blue-400"></div>
-            <p className="mt-4 text-gray-600 dark:text-gray-400 font-medium">Loading notes...</p>
+          <div className="text-center py-16 bg-gray-800/90 backdrop-blur-sm rounded-3xl shadow-xl border-2 border-blue-900/50">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-800 border-t-blue-400"></div>
+            <p className="mt-4 text-gray-400 font-medium">Loading notes...</p>
           </div>
         ) : notes.length === 0 ? (
-          <div className="text-center py-16 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-3xl shadow-xl border-2 border-blue-200 dark:border-blue-900/50">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 mb-4">
-              <svg className="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="text-center py-16 bg-gray-800/90 backdrop-blur-sm rounded-3xl shadow-xl border-2 border-blue-900/50">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-900/30 mb-4">
+              <svg className="w-8 h-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
-            <p className="text-lg text-gray-700 dark:text-gray-300 font-semibold">No notes yet.</p>
-            <p className="mt-2 text-gray-500 dark:text-gray-400">Notes will appear here when available.</p>
+            <p className="text-lg text-gray-300 font-semibold">No notes yet.</p>
+            <p className="mt-2 text-gray-400">Notes will appear here when available.</p>
           </div>
         ) : (
           notes.map((note) => (
-            <div key={note.id} className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-xl rounded-2xl p-6 border-2 border-blue-100 dark:border-blue-900/50 hover:border-blue-300 dark:hover:border-blue-700 transition-all">
+            <div key={note.id} className="bg-gray-800/90 backdrop-blur-sm shadow-xl rounded-2xl p-6 border-2 border-blue-900/50 hover:border-blue-700 transition-all">
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   {note.category && (
@@ -203,10 +203,10 @@ export default function TeamDetail() {
                       {note.category}
                     </span>
                   )}
-                  <p className="text-gray-900 dark:text-white whitespace-pre-wrap leading-relaxed text-base">
+                  <p className="text-white whitespace-pre-wrap leading-relaxed text-base">
                     {note.content}
                   </p>
-                  <div className="mt-4 flex items-center text-sm text-gray-500 dark:text-gray-400">
+                  <div className="mt-4 flex items-center text-sm text-gray-400">
                     <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>

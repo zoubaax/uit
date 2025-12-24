@@ -147,8 +147,8 @@ export default function PublicHome() {
 
   const getMedalColor = (rank) => {
     switch(rank) {
-      case 1: return 'from-yellow-400 to-amber-500 text-gray-900'
-      case 2: return 'from-gray-300 to-gray-400 text-gray-900'
+      case 1: return 'from-yellow-400 to-amber-500 text-white'
+      case 2: return 'from-gray-400 to-gray-500 text-white'
       case 3: return 'from-amber-600 to-amber-700 text-white'
       default: return 'from-blue-900/80 to-blue-800 text-blue-100'
     }
