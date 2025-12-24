@@ -58,7 +58,27 @@ export default function TeamDetail() {
         {/* Team Header */}
         <div className="mb-8 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-3xl shadow-2xl border-2 border-blue-200 dark:border-blue-900/50 overflow-hidden">
           <div className="bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 dark:from-blue-600 dark:via-indigo-700 dark:to-blue-800 p-8">
-            <h2 className="text-4xl lg:text-5xl font-extrabold text-white mb-3 drop-shadow-lg">{team.name}</h2>
+            <div className="flex items-center gap-6 mb-4">
+              {team.logo_url ? (
+                <img
+                  src={team.logo_url}
+                  alt={`${team.name} logo`}
+                  className="h-20 w-20 lg:h-24 lg:w-24 object-cover rounded-2xl shadow-lg border-2 border-white/30 flex-shrink-0"
+                  onError={(e) => {
+                    e.target.style.display = 'none'
+                    e.target.nextSibling.style.display = 'flex'
+                  }}
+                />
+              ) : null}
+              <div className={`p-4 lg:p-5 bg-white/20 backdrop-blur-sm rounded-2xl shadow-lg border border-white/30 flex-shrink-0 ${team.logo_url ? 'hidden' : ''}`}>
+                <svg className="h-12 w-12 lg:h-16 lg:w-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-4xl lg:text-5xl font-extrabold text-white mb-3 drop-shadow-lg">{team.name}</h2>
+              </div>
+            </div>
             {team.description && (
               <p className="text-lg text-blue-50 dark:text-blue-100 mb-4 leading-relaxed">{team.description}</p>
             )}

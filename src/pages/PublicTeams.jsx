@@ -67,14 +67,26 @@ export default function PublicTeams() {
                 {topTeams.map((team) => (
                   <div key={team.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-amber-200 dark:border-amber-800 shadow-sm">
                     <div className="flex items-center justify-between mb-2">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${
-                        team.rank === 1 
-                          ? 'bg-gradient-to-br from-yellow-400 to-amber-500 text-white' 
-                          : team.rank === 2
-                          ? 'bg-gradient-to-br from-gray-300 to-gray-400 text-gray-800'
-                          : 'bg-gradient-to-br from-amber-600 to-amber-700 text-white'
-                      }`}>
-                        {team.rank === 1 ? '🥇' : team.rank === 2 ? '🥈' : '🥉'}
+                      <div className="flex items-center gap-2">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${
+                          team.rank === 1 
+                            ? 'bg-gradient-to-br from-yellow-400 to-amber-500 text-white' 
+                            : team.rank === 2
+                            ? 'bg-gradient-to-br from-gray-300 to-gray-400 text-gray-800'
+                            : 'bg-gradient-to-br from-amber-600 to-amber-700 text-white'
+                        }`}>
+                          {team.rank === 1 ? '🥇' : team.rank === 2 ? '🥈' : '🥉'}
+                        </div>
+                        {team.logo_url ? (
+                          <img
+                            src={team.logo_url}
+                            alt={`${team.name} logo`}
+                            className="h-8 w-8 object-cover rounded-lg border border-amber-200 dark:border-amber-800 flex-shrink-0"
+                            onError={(e) => {
+                              e.target.style.display = 'none'
+                            }}
+                          />
+                        ) : null}
                       </div>
                       <span className="text-lg font-bold text-amber-600 dark:text-amber-400">
                         {Math.round(parseFloat(team.score))}
@@ -205,7 +217,18 @@ export default function PublicTeams() {
                             {team.rank === 1 ? '🥇' : team.rank === 2 ? '🥈' : team.rank === 3 ? '🥉' : `#${team.rank}`}
                           </div>
                         )}
-                        <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 dark:from-indigo-600 dark:to-purple-700 rounded-xl shadow-sm">
+                        {team.logo_url ? (
+                          <img
+                            src={team.logo_url}
+                            alt={`${team.name} logo`}
+                            className="h-12 w-12 object-cover rounded-xl shadow-sm border-2 border-gray-200 dark:border-gray-700 flex-shrink-0"
+                            onError={(e) => {
+                              e.target.style.display = 'none'
+                              e.target.nextSibling.style.display = 'flex'
+                            }}
+                          />
+                        ) : null}
+                        <div className={`p-2 bg-gradient-to-br from-indigo-500 to-purple-600 dark:from-indigo-600 dark:to-purple-700 rounded-xl shadow-sm flex-shrink-0 ${team.logo_url ? 'hidden' : ''}`}>
                           <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                           </svg>
