@@ -1,8 +1,402 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useAllEvaluations } from '../hooks/useAllEvaluations'
 import { useTeams } from '../hooks/useTeams'
 import { supabase } from '../lib/supabase'
 import DeleteConfirmation from '../components/DeleteConfirmation'
+
+// Move StarRating component outside
+const StarRating = ({ rating, onRatingChange, editable = false }) => {
+  return (
+    <div className="flex items-center space-x-1">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          type="button"
+          onClick={() => editable && onRatingChange?.(star)}
+          disabled={!editable}
+          className={`${editable ? 'cursor-pointer hover:scale-110 transition-transform' : 'cursor-default'} ${
+            star <= rating ? 'text-yellow-400' : 'text-gray-300 dark:text-gray-600'
+          }`}
+        >
+          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+          </svg>
+        </button>
+      ))}
+      {editable && (
+        <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+          {rating}/5
+        </span>
+      )}
+    </div>
+  )
+}
+
+// Move EvaluationFormModal outside the main component
+const EvaluationFormModal = ({ 
+  showFormModal, 
+  editingEvaluation, 
+  formData, 
+  formLoading, 
+  error,
+  teams,
+  handleFormChange, 
+  handleRatingChange,
+  handleSubmit, 
+  handleCancelForm 
+}) => {
+  if (!showFormModal) return null
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 z-50 transition-all duration-300 animate-fade-in"
+        onClick={handleCancelForm}
+      >
+        <div className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm" />
+      </div>
+
+      {/* Modal */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div 
+          className="relative w-full max-w-4xl max-h-[90vh] overflow-hidden bg-white dark:bg-gray-900 rounded-2xl shadow-2xl dark:shadow-3xl transform transition-all duration-300 animate-modal-in"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="px-8 py-6 bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-700 dark:to-teal-800">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-white">
+                  {editingEvaluation ? 'Edit Evaluation' : 'Create New Evaluation'}
+                </h2>
+                <p className="text-emerald-100 dark:text-emerald-300 mt-1">
+                  {editingEvaluation ? 'Update weekly evaluation' : 'Add a new weekly evaluation for a team'}
+                </p>
+              </div>
+              <button
+                onClick={handleCancelForm}
+                className="p-2 text-white hover:bg-white/10 rounded-lg transition-colors"
+                disabled={formLoading}
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mx-8 mt-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+              <div className="flex items-center text-red-700 dark:text-red-400">
+                <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="font-medium">{error}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Form Content */}
+          <div className="p-8 overflow-y-auto max-h-[calc(90vh-180px)]">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="team_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Team *
+                  </label>
+                  <select
+                    id="team_id"
+                    name="team_id"
+                    required
+                    value={formData.team_id}
+                    onChange={handleFormChange}
+                    className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-emerald-500 dark:focus:border-emerald-400 transition-all"
+                    disabled={formLoading}
+                    key={`team-${editingEvaluation?.id || 'new'}`}
+                  >
+                    <option value="">Select a team...</option>
+                    {teams.map((team) => (
+                      <option key={team.id} value={team.id}>
+                        {team.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="week_start_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Week Start Date *
+                  </label>
+                  <input
+                    type="date"
+                    id="week_start_date"
+                    name="week_start_date"
+                    required
+                    value={formData.week_start_date}
+                    onChange={handleFormChange}
+                    className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-emerald-500 dark:focus:border-emerald-400 transition-all"
+                    disabled={formLoading}
+                    key={`week-${editingEvaluation?.id || 'new'}`}
+                  />
+                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    Select Monday of the evaluation week
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Rating *
+                </label>
+                <StarRating 
+                  rating={formData.rating} 
+                  onRatingChange={handleRatingChange}
+                  editable={!formLoading}
+                />
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                  Rate the team's performance for this week
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="feedback" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Feedback
+                </label>
+                <textarea
+                  id="feedback"
+                  name="feedback"
+                  rows={6}
+                  value={formData.feedback}
+                  onChange={handleFormChange}
+                  className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-emerald-500 dark:focus:border-emerald-400 transition-all resize-none"
+                  placeholder="Enter your feedback, highlights, areas for improvement, and goals for next week..."
+                  disabled={formLoading}
+                  key={`feedback-${editingEvaluation?.id || 'new'}`}
+                />
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                  Include overall feedback, key highlights, areas for improvement, and goals for next week
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  type="button"
+                  onClick={handleCancelForm}
+                  className="px-6 py-3 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 dark:focus:ring-offset-gray-900 transition-all"
+                  disabled={formLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={formLoading}
+                  className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 dark:from-emerald-700 dark:to-teal-800 dark:hover:from-emerald-600 dark:hover:to-teal-700 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none disabled:hover:shadow-lg"
+                >
+                  {formLoading ? (
+                    <span className="flex items-center">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      {editingEvaluation ? 'Updating...' : 'Creating...'}
+                    </span>
+                  ) : (
+                    editingEvaluation ? 'Update Evaluation' : 'Create Evaluation'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Loading Overlay */}
+          {formLoading && (
+            <div className="absolute inset-0 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm flex items-center justify-center">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 dark:border-emerald-400 mx-auto"></div>
+                <p className="mt-4 text-gray-700 dark:text-gray-300 font-medium">
+                  {editingEvaluation ? 'Updating evaluation...' : 'Creating evaluation...'}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  )
+}
+
+// Move WeeklySummaryModal outside the main component
+const WeeklySummaryModal = ({ 
+  showSummary, 
+  summaryWeek, 
+  evaluations, 
+  teams, 
+  getTeamName, 
+  getTeamColor, 
+  formatWeekDate,
+  setShowSummary 
+}) => {
+  if (!showSummary) return null
+
+  const weekEvaluations = evaluations.filter(e => e.week_start_date === summaryWeek)
+  const weekStart = new Date(summaryWeek)
+  const weekEnd = new Date(weekStart)
+  weekEnd.setDate(weekEnd.getDate() + 6)
+
+  // Calculate statistics
+  const averageRating = weekEvaluations.length > 0 
+    ? (weekEvaluations.reduce((sum, evalItem) => sum + (evalItem.rating || 0), 0) / weekEvaluations.length).toFixed(1)
+    : 0
+  
+  const highestRated = weekEvaluations.length > 0 
+    ? weekEvaluations.reduce((prev, current) => (prev.rating || 0) > (current.rating || 0) ? prev : current)
+    : null
+  
+  const lowestRated = weekEvaluations.length > 0 
+    ? weekEvaluations.reduce((prev, current) => (prev.rating || 0) < (current.rating || 0) ? prev : current)
+    : null
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 z-50 transition-all duration-300 animate-fade-in"
+        onClick={() => setShowSummary(false)}
+      >
+        <div className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm" />
+      </div>
+
+      {/* Modal */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div 
+          className="relative w-full max-w-6xl max-h-[90vh] overflow-hidden bg-white dark:bg-gray-900 rounded-2xl shadow-2xl dark:shadow-3xl transform transition-all duration-300 animate-modal-in"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="px-8 py-6 bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-800">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-white">Weekly Summary</h2>
+                <p className="text-blue-100 dark:text-blue-300 mt-1">
+                  {formatWeekDate(summaryWeek)}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowSummary(false)}
+                className="p-2 text-white hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Summary Content */}
+          <div className="p-8 overflow-y-auto max-h-[calc(90vh-180px)]">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 rounded-2xl p-6 shadow-sm border border-blue-100 dark:border-blue-800/30">
+                <div className="text-center">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Average Rating</p>
+                  <div className="flex items-center justify-center space-x-2 mb-2">
+                    <StarRating rating={Math.round(averageRating)} />
+                    <span className="text-3xl font-bold text-gray-900 dark:text-white">{averageRating}</span>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">out of 5</p>
+                </div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/30 dark:to-emerald-800/20 rounded-2xl p-6 shadow-sm border border-emerald-100 dark:border-emerald-800/30">
+                <div className="text-center">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Teams Evaluated</p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">{weekEvaluations.length}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">out of {teams.length} teams</p>
+                </div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/30 dark:to-amber-800/20 rounded-2xl p-6 shadow-sm border border-amber-100 dark:border-amber-800/30">
+                <div className="text-center">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Week Coverage</p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                    {teams.length > 0 ? Math.round((weekEvaluations.length / teams.length) * 100) : 0}%
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">of teams evaluated</p>
+                </div>
+              </div>
+            </div>
+
+            {highestRated && (
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top Performers</h3>
+                <div className="bg-gradient-to-r from-emerald-50 to-white dark:from-emerald-900/10 dark:to-gray-800/10 rounded-xl border border-emerald-200 dark:border-emerald-800 p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xl font-bold text-gray-900 dark:text-white">{getTeamName(highestRated.team_id)}</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Highest rated team this week</p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <StarRating rating={highestRated.rating || 0} />
+                      <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{highestRated.rating || 0}/5</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">All Evaluations</h3>
+              {weekEvaluations.length === 0 ? (
+                <div className="text-center py-12">
+                  <svg className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <h3 className="mt-4 text-sm font-medium text-gray-900 dark:text-gray-100">No evaluations for this week</h3>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Create evaluations to see the summary</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4">
+                  {weekEvaluations.map((evaluation) => {
+                    const team = teams.find(t => t.id === evaluation.team_id)
+                    const teamColor = getTeamColor(evaluation.team_id)
+                    
+                    return (
+                      <div key={evaluation.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3 mb-3">
+                              <div className={`${teamColor} w-3 h-3 rounded-full`}></div>
+                              <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                {team?.name || 'Unknown Team'}
+                              </h4>
+                              <div className="flex items-center">
+                                <StarRating rating={evaluation.rating || 0} />
+                                <span className="ml-2 text-sm font-medium text-gray-600 dark:text-gray-400">
+                                  {evaluation.rating || 0}/5
+                                </span>
+                              </div>
+                            </div>
+                            
+                            {evaluation.feedback && (
+                              <p className="text-gray-600 dark:text-gray-300 mb-4 whitespace-pre-wrap">
+                                {evaluation.feedback}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
 
 export default function EvaluationsManagement() {
   const { evaluations, loading, refetch } = useAllEvaluations()
@@ -94,6 +488,29 @@ export default function EvaluationsManagement() {
     return (total / evaluations.length).toFixed(1)
   }, [evaluations])
 
+  // Use useCallback for stable event handlers
+  const handleFormChange = useCallback((e) => {
+    const { name, value, type } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'number' ? parseInt(value, 10) : value
+    }))
+  }, [])
+
+  const handleRatingChange = useCallback((rating) => {
+    setFormData(prev => ({
+      ...prev,
+      rating
+    }))
+  }, [])
+
+  const handleCancelForm = useCallback(() => {
+    setShowFormModal(false)
+    setEditingEvaluation(null)
+    setError('')
+    setSuccess('')
+  }, [])
+
   const handleCreate = () => {
     setEditingEvaluation(null)
     setShowFormModal(true)
@@ -102,13 +519,13 @@ export default function EvaluationsManagement() {
     setShowSummary(false)
   }
 
-  const handleEdit = (evaluation) => {
+  const handleEdit = useCallback((evaluation) => {
     setEditingEvaluation(evaluation)
     setShowFormModal(true)
     setError('')
     setSuccess('')
     setShowSummary(false)
-  }
+  }, [])
 
   const handleGenerateSummary = () => {
     if (selectedWeek) {
@@ -121,21 +538,6 @@ export default function EvaluationsManagement() {
         setShowSummary(true)
       }
     }
-  }
-
-  const handleFormChange = (e) => {
-    const { name, value, type } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'number' ? parseInt(value, 10) : value
-    }))
-  }
-
-  const handleRatingChange = (rating) => {
-    setFormData(prev => ({
-      ...prev,
-      rating
-    }))
   }
 
   const handleSubmit = async (e) => {
@@ -237,24 +639,17 @@ export default function EvaluationsManagement() {
     }
   }
 
-  const handleCancelForm = () => {
-    setShowFormModal(false)
-    setEditingEvaluation(null)
-    setError('')
-    setSuccess('')
-  }
-
   const clearFilters = () => {
     setSelectedTeam('')
     setSelectedWeek('')
   }
 
-  const getTeamName = (teamId) => {
+  const getTeamName = useCallback((teamId) => {
     const team = teams.find(t => t.id === teamId)
     return team?.name || 'Unknown Team'
-  }
+  }, [teams])
 
-  const getTeamColor = (teamId) => {
+  const getTeamColor = useCallback((teamId) => {
     const team = teams.find(t => t.id === teamId)
     if (!team) return 'bg-gray-500'
     
@@ -265,384 +660,14 @@ export default function EvaluationsManagement() {
     ]
     const index = teamId.charCodeAt(0) % colors.length
     return colors[index]
-  }
+  }, [teams])
 
-  const formatWeekDate = (dateString) => {
+  const formatWeekDate = useCallback((dateString) => {
     const date = new Date(dateString)
     const endDate = new Date(date)
     endDate.setDate(endDate.getDate() + 6)
     return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
-  }
-
-  const StarRating = ({ rating, onRatingChange, editable = false }) => {
-    return (
-      <div className="flex items-center space-x-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <button
-            key={star}
-            type="button"
-            onClick={() => editable && onRatingChange?.(star)}
-            disabled={!editable}
-            className={`${editable ? 'cursor-pointer hover:scale-110 transition-transform' : 'cursor-default'} ${
-              star <= rating ? 'text-yellow-400' : 'text-gray-300 dark:text-gray-600'
-            }`}
-          >
-            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-            </svg>
-          </button>
-        ))}
-        {editable && (
-          <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
-            {rating}/5
-          </span>
-        )}
-      </div>
-    )
-  }
-
-  // Evaluation Form Modal Component
-  const EvaluationFormModal = () => {
-    if (!showFormModal) return null
-
-    return (
-      <>
-        {/* Backdrop */}
-        <div 
-          className="fixed inset-0 z-50 transition-all duration-300 animate-fade-in"
-          onClick={handleCancelForm}
-        >
-          <div className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm" />
-        </div>
-
-        {/* Modal */}
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div 
-            className="relative w-full max-w-4xl max-h-[90vh] overflow-hidden bg-white dark:bg-gray-900 rounded-2xl shadow-2xl dark:shadow-3xl transform transition-all duration-300 animate-modal-in"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="px-8 py-6 bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-700 dark:to-teal-800">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold text-white">
-                    {editingEvaluation ? 'Edit Evaluation' : 'Create New Evaluation'}
-                  </h2>
-                  <p className="text-emerald-100 dark:text-emerald-300 mt-1">
-                    {editingEvaluation ? 'Update weekly evaluation' : 'Add a new weekly evaluation for a team'}
-                  </p>
-                </div>
-                <button
-                  onClick={handleCancelForm}
-                  className="p-2 text-white hover:bg-white/10 rounded-lg transition-colors"
-                  disabled={formLoading}
-                >
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            {/* Error Message */}
-            {error && (
-              <div className="mx-8 mt-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-                <div className="flex items-center text-red-700 dark:text-red-400">
-                  <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span className="font-medium">{error}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Form Content */}
-            <div className="p-8 overflow-y-auto max-h-[calc(90vh-180px)]">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label htmlFor="team_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Team *
-                    </label>
-                    <select
-                      id="team_id"
-                      name="team_id"
-                      required
-                      value={formData.team_id}
-                      onChange={handleFormChange}
-                      className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-emerald-500 dark:focus:border-emerald-400 transition-all"
-                      disabled={formLoading}
-                    >
-                      <option value="">Select a team...</option>
-                      {teams.map((team) => (
-                        <option key={team.id} value={team.id}>
-                          {team.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label htmlFor="week_start_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Week Start Date *
-                    </label>
-                    <input
-                      type="date"
-                      id="week_start_date"
-                      name="week_start_date"
-                      required
-                      value={formData.week_start_date}
-                      onChange={handleFormChange}
-                      className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-emerald-500 dark:focus:border-emerald-400 transition-all"
-                      disabled={formLoading}
-                    />
-                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                      Select Monday of the evaluation week
-                    </p>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Rating *
-                  </label>
-                  <StarRating 
-                    rating={formData.rating} 
-                    onRatingChange={handleRatingChange}
-                    editable={!formLoading}
-                  />
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                    Rate the team's performance for this week
-                  </p>
-                </div>
-
-                <div>
-                  <label htmlFor="feedback" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Feedback
-                  </label>
-                  <textarea
-                    id="feedback"
-                    name="feedback"
-                    rows={6}
-                    value={formData.feedback}
-                    onChange={handleFormChange}
-                    className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-emerald-500 dark:focus:border-emerald-400 transition-all resize-none"
-                    placeholder="Enter your feedback, highlights, areas for improvement, and goals for next week..."
-                    disabled={formLoading}
-                  />
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                    Include overall feedback, key highlights, areas for improvement, and goals for next week
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200 dark:border-gray-700">
-                  <button
-                    type="button"
-                    onClick={handleCancelForm}
-                    className="px-6 py-3 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 dark:focus:ring-offset-gray-900 transition-all"
-                    disabled={formLoading}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={formLoading}
-                    className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 dark:from-emerald-700 dark:to-teal-800 dark:hover:from-emerald-600 dark:hover:to-teal-700 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none disabled:hover:shadow-lg"
-                  >
-                    {formLoading ? (
-                      <span className="flex items-center">
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                        {editingEvaluation ? 'Updating...' : 'Creating...'}
-                      </span>
-                    ) : (
-                      editingEvaluation ? 'Update Evaluation' : 'Create Evaluation'
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-
-            {/* Loading Overlay */}
-            {formLoading && (
-              <div className="absolute inset-0 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm flex items-center justify-center">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 dark:border-emerald-400 mx-auto"></div>
-                  <p className="mt-4 text-gray-700 dark:text-gray-300 font-medium">
-                    {editingEvaluation ? 'Updating evaluation...' : 'Creating evaluation...'}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </>
-    )
-  }
-
-  // Weekly Summary Component
-  const WeeklySummaryModal = () => {
-    if (!showSummary) return null
-
-    const weekEvaluations = evaluations.filter(e => e.week_start_date === summaryWeek)
-    const weekStart = new Date(summaryWeek)
-    const weekEnd = new Date(weekStart)
-    weekEnd.setDate(weekEnd.getDate() + 6)
-
-    // Calculate statistics
-    const averageRating = weekEvaluations.length > 0 
-      ? (weekEvaluations.reduce((sum, evalItem) => sum + (evalItem.rating || 0), 0) / weekEvaluations.length).toFixed(1)
-      : 0
-    
-    const highestRated = weekEvaluations.length > 0 
-      ? weekEvaluations.reduce((prev, current) => (prev.rating || 0) > (current.rating || 0) ? prev : current)
-      : null
-    
-    const lowestRated = weekEvaluations.length > 0 
-      ? weekEvaluations.reduce((prev, current) => (prev.rating || 0) < (current.rating || 0) ? prev : current)
-      : null
-
-    return (
-      <>
-        {/* Backdrop */}
-        <div 
-          className="fixed inset-0 z-50 transition-all duration-300 animate-fade-in"
-          onClick={() => setShowSummary(false)}
-        >
-          <div className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm" />
-        </div>
-
-        {/* Modal */}
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div 
-            className="relative w-full max-w-6xl max-h-[90vh] overflow-hidden bg-white dark:bg-gray-900 rounded-2xl shadow-2xl dark:shadow-3xl transform transition-all duration-300 animate-modal-in"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="px-8 py-6 bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-800">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold text-white">Weekly Summary</h2>
-                  <p className="text-blue-100 dark:text-blue-300 mt-1">
-                    {formatWeekDate(summaryWeek)}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setShowSummary(false)}
-                  className="p-2 text-white hover:bg-white/10 rounded-lg transition-colors"
-                >
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            {/* Summary Content */}
-            <div className="p-8 overflow-y-auto max-h-[calc(90vh-180px)]">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 rounded-2xl p-6 shadow-sm border border-blue-100 dark:border-blue-800/30">
-                  <div className="text-center">
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Average Rating</p>
-                    <div className="flex items-center justify-center space-x-2 mb-2">
-                      <StarRating rating={Math.round(averageRating)} />
-                      <span className="text-3xl font-bold text-gray-900 dark:text-white">{averageRating}</span>
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">out of 5</p>
-                  </div>
-                </div>
-                
-                <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/30 dark:to-emerald-800/20 rounded-2xl p-6 shadow-sm border border-emerald-100 dark:border-emerald-800/30">
-                  <div className="text-center">
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Teams Evaluated</p>
-                    <p className="text-3xl font-bold text-gray-900 dark:text-white">{weekEvaluations.length}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">out of {teams.length} teams</p>
-                  </div>
-                </div>
-                
-                <div className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/30 dark:to-amber-800/20 rounded-2xl p-6 shadow-sm border border-amber-100 dark:border-amber-800/30">
-                  <div className="text-center">
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Week Coverage</p>
-                    <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                      {teams.length > 0 ? Math.round((weekEvaluations.length / teams.length) * 100) : 0}%
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">of teams evaluated</p>
-                  </div>
-                </div>
-              </div>
-
-              {highestRated && (
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top Performers</h3>
-                  <div className="bg-gradient-to-r from-emerald-50 to-white dark:from-emerald-900/10 dark:to-gray-800/10 rounded-xl border border-emerald-200 dark:border-emerald-800 p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="text-xl font-bold text-gray-900 dark:text-white">{getTeamName(highestRated.team_id)}</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Highest rated team this week</p>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <StarRating rating={highestRated.rating || 0} />
-                        <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{highestRated.rating || 0}/5</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-6">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">All Evaluations</h3>
-                {weekEvaluations.length === 0 ? (
-                  <div className="text-center py-12">
-                    <svg className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <h3 className="mt-4 text-sm font-medium text-gray-900 dark:text-gray-100">No evaluations for this week</h3>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Create evaluations to see the summary</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 gap-4">
-                    {weekEvaluations.map((evaluation) => {
-                      const team = teams.find(t => t.id === evaluation.team_id)
-                      const teamColor = getTeamColor(evaluation.team_id)
-                      
-                      return (
-                        <div key={evaluation.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-3 mb-3">
-                                <div className={`${teamColor} w-3 h-3 rounded-full`}></div>
-                                <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                  {team?.name || 'Unknown Team'}
-                                </h4>
-                                <div className="flex items-center">
-                                  <StarRating rating={evaluation.rating || 0} />
-                                  <span className="ml-2 text-sm font-medium text-gray-600 dark:text-gray-400">
-                                    {evaluation.rating || 0}/5
-                                  </span>
-                                </div>
-                              </div>
-                              
-                              {evaluation.feedback && (
-                                <p className="text-gray-600 dark:text-gray-300 mb-4 whitespace-pre-wrap">
-                                  {evaluation.feedback}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </>
-    )
-  }
+  }, [])
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-950 px-4 py-8 sm:px-6 lg:px-8">
@@ -946,10 +971,30 @@ export default function EvaluationsManagement() {
         )}
 
         {/* Evaluation Form Modal */}
-        <EvaluationFormModal />
+        <EvaluationFormModal
+          showFormModal={showFormModal}
+          editingEvaluation={editingEvaluation}
+          formData={formData}
+          formLoading={formLoading}
+          error={error}
+          teams={teams}
+          handleFormChange={handleFormChange}
+          handleRatingChange={handleRatingChange}
+          handleSubmit={handleSubmit}
+          handleCancelForm={handleCancelForm}
+        />
 
         {/* Weekly Summary Modal */}
-        <WeeklySummaryModal />
+        <WeeklySummaryModal
+          showSummary={showSummary}
+          summaryWeek={summaryWeek}
+          evaluations={evaluations}
+          teams={teams}
+          getTeamName={getTeamName}
+          getTeamColor={getTeamColor}
+          formatWeekDate={formatWeekDate}
+          setShowSummary={setShowSummary}
+        />
 
         {/* Delete Confirmation Dialog */}
         <DeleteConfirmation

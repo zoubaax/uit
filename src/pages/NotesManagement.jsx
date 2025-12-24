@@ -1,9 +1,297 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useAllNotes } from '../hooks/useAllNotes'
 import { useTeams } from '../hooks/useTeams'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import DeleteConfirmation from '../components/DeleteConfirmation'
+
+// Move NoteFormModal outside the main component
+const NoteFormModal = ({ 
+  showFormModal, 
+  editingNote, 
+  formData, 
+  formLoading, 
+  error,
+  success,
+  teams,
+  handleFormChange, 
+  handleSubmit, 
+  handleCancelForm 
+}) => {
+  if (!showFormModal) return null
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 z-50 transition-all duration-300 animate-fade-in"
+        onClick={handleCancelForm}
+      >
+        <div className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm" />
+      </div>
+
+      {/* Modal */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div 
+          className="relative w-full max-w-2xl max-h-[90vh] overflow-hidden bg-white dark:bg-gray-900 rounded-2xl shadow-2xl dark:shadow-3xl transform transition-all duration-300 animate-modal-in"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="px-8 py-6 bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-700 dark:to-purple-800">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-white">
+                  {editingNote ? 'Edit Note' : 'Create New Note'}
+                </h2>
+                <p className="text-indigo-100 dark:text-indigo-300 mt-1">
+                  {editingNote ? 'Update your note' : 'Add a new note for any team'}
+                </p>
+              </div>
+              <button
+                onClick={handleCancelForm}
+                className="p-2 text-white hover:bg-white/10 rounded-lg transition-colors"
+                disabled={formLoading}
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mx-8 mt-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+              <div className="flex items-center text-red-700 dark:text-red-400">
+                <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="font-medium">{error}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Success Message */}
+          {success && (
+            <div className="mx-8 mt-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+              <div className="flex items-center text-green-700 dark:text-green-400">
+                <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="font-medium">{success}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Form Content */}
+          <div className="p-8 overflow-y-auto max-h-[calc(90vh-180px)]">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {!editingNote && (
+                <div>
+                  <label htmlFor="team_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Select Team *
+                  </label>
+                  <select
+                    id="team_id"
+                    name="team_id"
+                    required
+                    value={formData.team_id}
+                    onChange={handleFormChange}
+                    className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 transition-all"
+                    disabled={formLoading}
+                  >
+                    <option value="">Select a team...</option>
+                    {teams.map((team) => (
+                      <option key={team.id} value={team.id}>
+                        {team.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Category
+                </label>
+                <input
+                  type="text"
+                  id="category"
+                  name="category"
+                  value={formData.category}
+                  onChange={handleFormChange}
+                  className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 transition-all"
+                  placeholder="General, Feedback, Task, etc."
+                  disabled={formLoading}
+                  key={`category-${editingNote?.id || 'new'}`}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="content" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Note Content *
+                </label>
+                <textarea
+                  id="content"
+                  name="content"
+                  required
+                  rows={6}
+                  value={formData.content}
+                  onChange={handleFormChange}
+                  className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 transition-all resize-none"
+                  placeholder="Write your note here..."
+                  disabled={formLoading}
+                  autoFocus
+                  key={`content-${editingNote?.id || 'new'}`}
+                />
+              </div>
+
+              <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  type="button"
+                  onClick={handleCancelForm}
+                  className="px-6 py-3 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-900 transition-all"
+                  disabled={formLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={formLoading}
+                  className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 dark:from-indigo-700 dark:to-purple-800 dark:hover:from-indigo-600 dark:hover:to-purple-700 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none disabled:hover:shadow-lg"
+                >
+                  {formLoading ? (
+                    <span className="flex items-center">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      {editingNote ? 'Updating...' : 'Creating...'}
+                    </span>
+                  ) : (
+                    editingNote ? 'Update Note' : 'Create Note'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Loading Overlay */}
+          {formLoading && (
+            <div className="absolute inset-0 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm flex items-center justify-center">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400 mx-auto"></div>
+                <p className="mt-4 text-gray-700 dark:text-gray-300 font-medium">
+                  {editingNote ? 'Updating note...' : 'Creating note...'}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  )
+}
+
+// Move NotePreviewModal outside the main component
+const NotePreviewModal = ({ 
+  previewNote, 
+  handleClosePreview, 
+  handleEdit 
+}) => {
+  if (!previewNote) return null
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 z-50 transition-all duration-300 animate-fade-in"
+        onClick={handleClosePreview}
+      >
+        <div className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm" />
+      </div>
+
+      {/* Modal */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div 
+          className="relative w-full max-w-3xl max-h-[90vh] overflow-hidden bg-white dark:bg-gray-900 rounded-2xl shadow-2xl dark:shadow-3xl transform transition-all duration-300 animate-modal-in"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="px-8 py-6 bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-700 dark:to-purple-800">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-white">Note Preview</h2>
+                <div className="flex items-center space-x-3 mt-2">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-white/20 text-white">
+                    {previewNote.teamName}
+                  </span>
+                  {previewNote.category && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-white/10 text-white">
+                      {previewNote.category}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={handleClosePreview}
+                className="p-2 text-white hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Note Content */}
+          <div className="p-8 overflow-y-auto max-h-[calc(90vh-180px)]">
+            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 mb-6">
+              <p className="text-gray-900 dark:text-gray-100 whitespace-pre-wrap leading-relaxed text-lg">
+                {previewNote.content}
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+              <div className="flex items-center space-x-4">
+                <span className="flex items-center">
+                  <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {new Date(previewNote.created_at).toLocaleString('en-US', {
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </span>
+                <span className="flex items-center">
+                  <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  {previewNote.created_by ? 'By Admin' : 'Anonymous'}
+                </span>
+              </div>
+              
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => {
+                    handleClosePreview()
+                    handleEdit(previewNote)
+                  }}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Edit Note
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
 
 export default function NotesManagement() {
   const { notes, loading, refetch } = useAllNotes()
@@ -99,6 +387,23 @@ export default function NotesManagement() {
     })
   }, [notes, selectedTeam, selectedCategory, dateFilter])
 
+  // Use useCallback for stable event handlers
+  const handleFormChange = useCallback((e) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }, [])
+
+  const handleCancelForm = useCallback(() => {
+    setShowFormModal(false)
+    setEditingNote(null)
+    setPreviewNote(null)
+    setError('')
+    setSuccess('')
+  }, [])
+
   const handleCreate = () => {
     setEditingNote(null)
     setPreviewNote(null)
@@ -107,34 +412,26 @@ export default function NotesManagement() {
     setSuccess('')
   }
 
-  const handleEdit = (note) => {
+  const handleEdit = useCallback((note) => {
     setEditingNote(note)
     setPreviewNote(null)
     setShowFormModal(true)
     setError('')
     setSuccess('')
-  }
+  }, [])
 
-  const handlePreview = (note) => {
+  const handlePreview = useCallback((note) => {
     const team = teams.find(t => t.id === note.team_id)
     setPreviewNote({ 
       ...note, 
       teamName: team?.name,
       teamColor: getTeamColor(note.team_id)
     })
-  }
+  }, [teams])
 
-  const handleClosePreview = () => {
+  const handleClosePreview = useCallback(() => {
     setPreviewNote(null)
-  }
-
-  const handleFormChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
-  }
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -282,14 +579,6 @@ export default function NotesManagement() {
     }
   }
 
-  const handleCancelForm = () => {
-    setShowFormModal(false)
-    setEditingNote(null)
-    setPreviewNote(null)
-    setError('')
-    setSuccess('')
-  }
-
   const clearFilters = () => {
     setSelectedTeam('')
     setSelectedCategory('')
@@ -324,277 +613,6 @@ export default function NotesManagement() {
   const handleCloseBulkDeleteModal = () => {
     setBulkDeleteOpen(false)
     setError('')
-  }
-
-  // Note Form Modal Component
-  const NoteFormModal = () => {
-    if (!showFormModal) return null
-
-    return (
-      <>
-        {/* Backdrop */}
-        <div 
-          className="fixed inset-0 z-50 transition-all duration-300 animate-fade-in"
-          onClick={handleCancelForm}
-        >
-          <div className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm" />
-        </div>
-
-        {/* Modal */}
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div 
-            className="relative w-full max-w-2xl max-h-[90vh] overflow-hidden bg-white dark:bg-gray-900 rounded-2xl shadow-2xl dark:shadow-3xl transform transition-all duration-300 animate-modal-in"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="px-8 py-6 bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-700 dark:to-purple-800">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold text-white">
-                    {editingNote ? 'Edit Note' : 'Create New Note'}
-                  </h2>
-                  <p className="text-indigo-100 dark:text-indigo-300 mt-1">
-                    {editingNote ? 'Update your note' : 'Add a new note for any team'}
-                  </p>
-                </div>
-                <button
-                  onClick={handleCancelForm}
-                  className="p-2 text-white hover:bg-white/10 rounded-lg transition-colors"
-                  disabled={formLoading}
-                >
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            {/* Error Message */}
-            {error && (
-              <div className="mx-8 mt-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-                <div className="flex items-center text-red-700 dark:text-red-400">
-                  <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span className="font-medium">{error}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Success Message */}
-            {success && (
-              <div className="mx-8 mt-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
-                <div className="flex items-center text-green-700 dark:text-green-400">
-                  <svg className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="font-medium">{success}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Form Content */}
-            <div className="p-8 overflow-y-auto max-h-[calc(90vh-180px)]">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {!editingNote && (
-                  <div>
-                    <label htmlFor="team_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Select Team *
-                    </label>
-                    <select
-                      id="team_id"
-                      name="team_id"
-                      required
-                      value={formData.team_id}
-                      onChange={handleFormChange}
-                      className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 transition-all"
-                      disabled={formLoading}
-                    >
-                      <option value="">Select a team...</option>
-                      {teams.map((team) => (
-                        <option key={team.id} value={team.id}>
-                          {team.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                <div>
-                  <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Category
-                  </label>
-                  <input
-                    type="text"
-                    id="category"
-                    name="category"
-                    value={formData.category}
-                    onChange={handleFormChange}
-                    className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 transition-all"
-                    placeholder="General, Feedback, Task, etc."
-                    disabled={formLoading}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="content" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Note Content *
-                  </label>
-                  <textarea
-                    id="content"
-                    name="content"
-                    required
-                    rows={6}
-                    value={formData.content}
-                    onChange={handleFormChange}
-                    className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 transition-all resize-none"
-                    placeholder="Write your note here..."
-                    disabled={formLoading}
-                    autoFocus
-                  />
-                </div>
-
-                <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200 dark:border-gray-700">
-                  <button
-                    type="button"
-                    onClick={handleCancelForm}
-                    className="px-6 py-3 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-900 transition-all"
-                    disabled={formLoading}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={formLoading}
-                    className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 dark:from-indigo-700 dark:to-purple-800 dark:hover:from-indigo-600 dark:hover:to-purple-700 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none disabled:hover:shadow-lg"
-                  >
-                    {formLoading ? (
-                      <span className="flex items-center">
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                        {editingNote ? 'Updating...' : 'Creating...'}
-                      </span>
-                    ) : (
-                      editingNote ? 'Update Note' : 'Create Note'
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-
-            {/* Loading Overlay */}
-            {formLoading && (
-              <div className="absolute inset-0 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm flex items-center justify-center">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400 mx-auto"></div>
-                  <p className="mt-4 text-gray-700 dark:text-gray-300 font-medium">
-                    {editingNote ? 'Updating note...' : 'Creating note...'}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </>
-    )
-  }
-
-  // Note Preview Component
-  const NotePreviewModal = () => {
-    if (!previewNote) return null
-
-    return (
-      <>
-        {/* Backdrop */}
-        <div 
-          className="fixed inset-0 z-50 transition-all duration-300 animate-fade-in"
-          onClick={handleClosePreview}
-        >
-          <div className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm" />
-        </div>
-
-        {/* Modal */}
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div 
-            className="relative w-full max-w-3xl max-h-[90vh] overflow-hidden bg-white dark:bg-gray-900 rounded-2xl shadow-2xl dark:shadow-3xl transform transition-all duration-300 animate-modal-in"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="px-8 py-6 bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-700 dark:to-purple-800">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold text-white">Note Preview</h2>
-                  <div className="flex items-center space-x-3 mt-2">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-white/20 text-white">
-                      {previewNote.teamName}
-                    </span>
-                    {previewNote.category && (
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-white/10 text-white">
-                        {previewNote.category}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <button
-                  onClick={handleClosePreview}
-                  className="p-2 text-white hover:bg-white/10 rounded-lg transition-colors"
-                >
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            {/* Note Content */}
-            <div className="p-8 overflow-y-auto max-h-[calc(90vh-180px)]">
-              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 mb-6">
-                <p className="text-gray-900 dark:text-gray-100 whitespace-pre-wrap leading-relaxed text-lg">
-                  {previewNote.content}
-                </p>
-              </div>
-
-              <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
-                <div className="flex items-center space-x-4">
-                  <span className="flex items-center">
-                    <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    {new Date(previewNote.created_at).toLocaleString('en-US', {
-                      month: 'long',
-                      day: 'numeric',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </span>
-                  <span className="flex items-center">
-                    <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                    {previewNote.created_by ? 'By Admin' : 'Anonymous'}
-                  </span>
-                </div>
-                
-                <div className="flex items-center space-x-3">
-                  <button
-                    onClick={() => {
-                      handleClosePreview()
-                      handleEdit(previewNote)
-                    }}
-                    className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    Edit Note
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </>
-    )
   }
 
   return (
@@ -1008,10 +1026,25 @@ export default function NotesManagement() {
         )}
 
         {/* Note Form Modal */}
-        <NoteFormModal />
+        <NoteFormModal
+          showFormModal={showFormModal}
+          editingNote={editingNote}
+          formData={formData}
+          formLoading={formLoading}
+          error={error}
+          success={success}
+          teams={teams}
+          handleFormChange={handleFormChange}
+          handleSubmit={handleSubmit}
+          handleCancelForm={handleCancelForm}
+        />
 
         {/* Note Preview Modal */}
-        <NotePreviewModal />
+        <NotePreviewModal
+          previewNote={previewNote}
+          handleClosePreview={handleClosePreview}
+          handleEdit={handleEdit}
+        />
 
         {/* Delete Confirmation Dialog */}
         <DeleteConfirmation
