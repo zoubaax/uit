@@ -7,22 +7,22 @@ import { supabase } from '../lib/supabase'
 import { uploadTeamLogo, deleteTeamLogo } from '../utils/uploadLogo'
 
 // Move TeamFormModal outside the main component
-const TeamFormModal = ({ 
-  showFormModal, 
-  editingTeam, 
-  formData, 
-  formLoading, 
+const TeamFormModal = ({
+  showFormModal,
+  editingTeam,
+  formData,
+  formLoading,
   error,
-  handleFormChange, 
-  handleSubmit, 
-  handleCancelForm 
+  handleFormChange,
+  handleSubmit,
+  handleCancelForm
 }) => {
   if (!showFormModal) return null
 
   return (
     <>
       {/* Backdrop */}
-      <div 
+      <div
         className="fixed inset-0 z-50 transition-all duration-300 animate-fade-in"
         onClick={handleCancelForm}
       >
@@ -31,7 +31,7 @@ const TeamFormModal = ({
 
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div 
+        <div
           className="relative w-full max-w-2xl max-h-[90vh] overflow-hidden bg-gray-900 rounded-2xl shadow-3xl transform transition-all duration-300 animate-modal-in"
           onClick={(e) => e.stopPropagation()}
         >
@@ -231,11 +231,11 @@ const TeamFormModal = ({
 }
 
 // Move DeleteConfirmationModal outside too
-const DeleteConfirmationModal = ({ 
-  deleteTeam, 
-  formLoading, 
-  setDeleteTeam, 
-  handleDeleteConfirm 
+const DeleteConfirmationModal = ({
+  deleteTeam,
+  formLoading,
+  setDeleteTeam,
+  handleDeleteConfirm
 }) => {
   const isOpen = !!deleteTeam
 
@@ -245,12 +245,12 @@ const DeleteConfirmationModal = ({
         setDeleteTeam(null)
       }
     }
-    
+
     if (isOpen) {
       document.addEventListener('keydown', handleEscape)
       document.body.style.overflow = 'hidden'
     }
-    
+
     return () => {
       document.removeEventListener('keydown', handleEscape)
       document.body.style.overflow = 'unset'
@@ -262,7 +262,7 @@ const DeleteConfirmationModal = ({
   return (
     <>
       {/* Backdrop */}
-      <div 
+      <div
         className="fixed inset-0 z-50 transition-all duration-300 animate-fade-in"
         onClick={() => setDeleteTeam(null)}
       >
@@ -271,7 +271,7 @@ const DeleteConfirmationModal = ({
 
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div 
+        <div
           className="relative w-full max-w-md overflow-hidden bg-gray-900 rounded-2xl shadow-3xl transform transition-all duration-300 scale-100 opacity-100"
           onClick={(e) => e.stopPropagation()}
         >
@@ -304,13 +304,13 @@ const DeleteConfirmationModal = ({
               <p className="text-gray-300 mb-4">
                 Are you sure you want to delete this team? This action cannot be undone and will permanently delete:
               </p>
-              
+
               {deleteTeam?.name && (
                 <div className="p-4 bg-red-900/20 border border-red-800 rounded-xl mb-4">
                   <p className="text-red-400 font-medium">{deleteTeam.name}</p>
                 </div>
               )}
-              
+
               <ul className="space-y-2 mb-4">
                 <li className="flex items-center text-sm text-gray-400">
                   <svg className="h-4 w-4 text-red-400 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -337,7 +337,7 @@ const DeleteConfirmationModal = ({
                   Team member assignments
                 </li>
               </ul>
-              
+
               <p className="text-sm text-red-400 font-medium">
                 This action cannot be undone.
               </p>
@@ -410,7 +410,7 @@ export default function TeamsManagement() {
 
   const { notes: teamNotes, loading: notesLoading } = useNotes(viewingTeam?.id)
   const { evaluations: teamEvaluations, loading: evaluationsLoading } = useWeeklyEvaluations(viewingTeam?.id)
-  const { members: teamMembers, loading: membersLoading, addMember, removeMember } = useTeamMembers(viewingTeam?.id)
+  const { members: teamMembers, loading: membersLoading, addMember, removeMember, refetch: refetchMembers } = useTeamMembers(viewingTeam?.id)
   const [showMemberForm, setShowMemberForm] = useState(false)
   const [memberFormData, setMemberFormData] = useState({ name: '', email: '', role: '' })
   const [memberFormLoading, setMemberFormLoading] = useState(false)
@@ -433,10 +433,10 @@ export default function TeamsManagement() {
   sortedTeams.forEach((team, index) => {
     let rank = null
     if (team.score !== null && team.score !== undefined) {
-      if (index > 0 && 
-          sortedTeams[index - 1].score !== null &&
-          sortedTeams[index - 1].score !== undefined &&
-          team.score === sortedTeams[index - 1].score) {
+      if (index > 0 &&
+        sortedTeams[index - 1].score !== null &&
+        sortedTeams[index - 1].score !== undefined &&
+        team.score === sortedTeams[index - 1].score) {
         rank = teamsWithRanking[index - 1].rank
       } else {
         rank = currentRank
@@ -503,12 +503,12 @@ export default function TeamsManagement() {
         handleCancelForm()
       }
     }
-    
+
     if (showFormModal) {
       document.addEventListener('keydown', handleEscape)
       document.body.style.overflow = 'hidden'
     }
-    
+
     return () => {
       document.removeEventListener('keydown', handleEscape)
       document.body.style.overflow = 'unset'
@@ -553,7 +553,7 @@ export default function TeamsManagement() {
         // Use existing team ID or generate a temporary UUID for file naming
         const teamId = editingTeam?.id || `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
         const uploadResult = await uploadTeamLogo(formData.logo, teamId)
-        
+
         if (uploadResult.error) {
           throw new Error(uploadResult.error)
         }
@@ -608,7 +608,7 @@ export default function TeamsManagement() {
       }
 
       await refetch()
-      
+
       setTimeout(() => {
         setShowFormModal(false)
         setEditingTeam(null)
@@ -643,11 +643,11 @@ export default function TeamsManagement() {
         .eq('id', deleteTeam.id)
 
       if (deleteError) throw deleteError
-      
+
       setSuccess('Team deleted successfully!')
       await refetch()
       setDeleteTeam(null)
-      
+
       setTimeout(() => setSuccess(''), 2000)
     } catch (err) {
       console.error('Error deleting team:', err)
@@ -676,9 +676,9 @@ export default function TeamsManagement() {
       // Get current team to access existing score
       const currentTeam = teams.find(t => t.id === teamId)
       const currentScore = currentTeam?.score !== null && currentTeam?.score !== undefined ? parseFloat(currentTeam.score) : 0
-      
+
       const addValue = scoreInputValue.trim() === '' ? 0 : parseFloat(scoreInputValue)
-      
+
       if (scoreInputValue.trim() !== '' && (isNaN(addValue))) {
         setError('Please enter a valid number')
         setScoreUpdating(false)
@@ -708,10 +708,10 @@ export default function TeamsManagement() {
         .eq('id', teamId)
 
       if (updateError) throw updateError
-      
+
       setSuccess(`Score updated! Added ${addValue >= 0 ? '+' : ''}${Math.round(addValue)}. New score: ${Math.round(newScore)}`)
       await refetch()
-      
+
       // Update viewingTeam if it's currently being viewed
       if (viewingTeam && viewingTeam.id === teamId) {
         const { data: updatedTeam } = await supabase
@@ -723,10 +723,10 @@ export default function TeamsManagement() {
           setViewingTeam(updatedTeam)
         }
       }
-      
+
       setEditingScoreTeamId(null)
       setScoreInputValue('')
-      
+
       setTimeout(() => setSuccess(''), 2000)
     } catch (err) {
       console.error('Error updating score:', err)
@@ -751,7 +751,7 @@ export default function TeamsManagement() {
               </svg>
               Back to Teams
             </button>
-            
+
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
               <div className="flex-1">
                 <div className="flex items-center space-x-3 mb-4">
@@ -854,21 +854,21 @@ export default function TeamsManagement() {
                     )}
                   </div>
                 </div>
-                
+
                 <div className="flex flex-wrap items-center gap-3 mt-4">
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-800 text-gray-300">
                     <svg className="mr-1.5 h-3 w-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    Created {new Date(viewingTeam.created_at).toLocaleDateString('en-US', { 
-                      year: 'numeric', 
-                      month: 'long', 
-                      day: 'numeric' 
+                    Created {new Date(viewingTeam.created_at).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
                     })}
                   </span>
                 </div>
               </div>
-              
+
               <div className="flex flex-wrap gap-3">
                 <button
                   onClick={() => handleEdit(viewingTeam)}
@@ -998,16 +998,69 @@ export default function TeamsManagement() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {teamMembers.map((member) => (
-                    <div key={member.id} className="p-4 bg-gray-900/50 rounded-xl border border-gray-700 hover:border-blue-600 transition-all">
+                    <div key={member.id} className={`p-4 rounded-xl border transition-all ${member.is_absent ? 'bg-red-900/20 border-red-800' : 'bg-gray-900/50 border-gray-700 hover:border-blue-600'}`}>
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h4 className="font-semibold text-white">{member.name}</h4>
+                          <div className="flex items-center gap-2">
+                            <h4 className={`font-semibold ${member.is_absent ? 'text-red-400' : 'text-white'}`}>{member.name}</h4>
+                            {member.is_absent && (
+                              <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-red-500 text-white rounded-full">
+                                Absent
+                              </span>
+                            )}
+                          </div>
                           {member.role && (
                             <p className="text-sm text-gray-400 mt-1">{member.role}</p>
                           )}
                           {member.email && (
                             <p className="text-xs text-gray-500 mt-1">{member.email}</p>
                           )}
+
+                          <div className="mt-4 pt-3 border-t border-gray-700/50">
+                            <label className="relative inline-flex items-center cursor-pointer group">
+                              <input
+                                type="checkbox"
+                                className="sr-only peer"
+                                checked={member.is_absent || false}
+                                onChange={async (e) => {
+                                  const is_absent = e.target.checked
+                                  const penalty = 5
+
+                                  try {
+                                    // 1. Update member absence status
+                                    const { error: memberError } = await supabase
+                                      .from('team_members')
+                                      .update({ is_absent })
+                                      .eq('id', member.id)
+
+                                    if (memberError) throw memberError
+
+                                    // 2. Update team score
+                                    const currentScore = viewingTeam.score !== null ? parseFloat(viewingTeam.score) : 0
+                                    const scoreAdjustment = is_absent ? -penalty : penalty
+                                    const newScore = Math.max(0, currentScore + scoreAdjustment)
+
+                                    const { error: teamError } = await supabase
+                                      .from('teams')
+                                      .update({ score: newScore })
+                                      .eq('id', viewingTeam.id)
+
+                                    if (teamError) throw teamError
+
+                                    // 3. Update local state
+                                    setViewingTeam(prev => ({ ...prev, score: newScore }))
+                                    refetch() // Refetch teams list
+                                    refetchMembers() // Refresh members list
+                                  } catch (err) {
+                                    console.error('Error toggling absence:', err)
+                                    alert('Failed to update absence status')
+                                  }
+                                }}
+                              />
+                              <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-red-400 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-600"></div>
+                              <span className="ms-3 text-xs font-medium text-gray-400 group-hover:text-gray-300 transition-colors">Mark as Absent (-5 pts)</span>
+                            </label>
+                          </div>
                         </div>
                         <button
                           onClick={async () => {
@@ -1057,15 +1110,14 @@ export default function TeamsManagement() {
                 ) : (
                   <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2">
                     {teamNotes.map((note, index) => (
-                      <div 
-                        key={note.id} 
-                        className={`p-5 rounded-xl border-l-4 ${
-                          index % 3 === 0 
-                            ? 'border-l-blue-400 bg-blue-900/20' 
-                            : index % 3 === 1 
-                            ? 'border-l-green-400 bg-green-900/20' 
+                      <div
+                        key={note.id}
+                        className={`p-5 rounded-xl border-l-4 ${index % 3 === 0
+                          ? 'border-l-blue-400 bg-blue-900/20'
+                          : index % 3 === 1
+                            ? 'border-l-green-400 bg-green-900/20'
                             : 'border-l-purple-400 bg-purple-900/20'
-                        }`}
+                          }`}
                       >
                         {note.category && (
                           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-800 text-gray-300 mb-3 shadow-sm">
@@ -1129,10 +1181,10 @@ export default function TeamsManagement() {
                         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
                           <div className="flex-1">
                             <h3 className="text-lg font-semibold text-white">
-                              Week of {new Date(evaluation.week_start_date).toLocaleDateString('en-US', { 
-                                month: 'long', 
-                                day: 'numeric', 
-                                year: 'numeric' 
+                              Week of {new Date(evaluation.week_start_date).toLocaleDateString('en-US', {
+                                month: 'long',
+                                day: 'numeric',
+                                year: 'numeric'
                               })}
                             </h3>
                             <p className="text-sm text-gray-400 mt-1">
@@ -1210,7 +1262,7 @@ export default function TeamsManagement() {
                 Create, edit, and manage your organization's teams
               </p>
             </div>
-            
+
             <button
               onClick={handleCreate}
               className="group inline-flex items-center px-6 py-3.5 bg-gradient-to-r from-indigo-700 to-purple-800 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
@@ -1226,7 +1278,7 @@ export default function TeamsManagement() {
           {(() => {
             const topTeams = teamsWithRanking.filter(t => t.score !== null && t.score !== undefined).slice(0, 3)
             if (topTeams.length === 0) return null
-            
+
             return (
               <div className="mb-8 bg-gradient-to-r from-amber-900/20 via-yellow-900/20 to-amber-900/20 rounded-2xl border-2 border-amber-800 p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -1241,13 +1293,12 @@ export default function TeamsManagement() {
                   {topTeams.map((team) => (
                     <div key={team.id} className="bg-gray-800 rounded-xl p-4 border border-amber-800 shadow-sm">
                       <div className="flex items-center justify-between mb-2">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${
-                          team.rank === 1 
-                            ? 'bg-gradient-to-br from-yellow-400 to-amber-500 text-white' 
-                            : team.rank === 2
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${team.rank === 1
+                          ? 'bg-gradient-to-br from-yellow-400 to-amber-500 text-white'
+                          : team.rank === 2
                             ? 'bg-gradient-to-br from-gray-400 to-gray-500 text-white'
                             : 'bg-gradient-to-br from-amber-600 to-amber-700 text-white'
-                        }`}>
+                          }`}>
                           {team.rank === 1 ? '🥇' : team.rank === 2 ? '🥈' : '🥉'}
                         </div>
                         <span className="text-lg font-bold text-amber-400">
@@ -1277,7 +1328,7 @@ export default function TeamsManagement() {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-gradient-to-br from-emerald-900/30 to-emerald-800/20 rounded-2xl p-6 shadow-sm border border-emerald-800/30">
               <div className="flex items-center">
                 <div className="p-3 bg-gray-800 rounded-xl shadow-sm mr-4">
@@ -1293,7 +1344,7 @@ export default function TeamsManagement() {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-gradient-to-br from-amber-900/30 to-amber-800/20 rounded-2xl p-6 shadow-sm border border-amber-800/30">
               <div className="flex items-center">
                 <div className="p-3 bg-gray-800 rounded-xl shadow-sm mr-4">
@@ -1309,7 +1360,7 @@ export default function TeamsManagement() {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-gradient-to-br from-purple-900/30 to-purple-800/20 rounded-2xl p-6 shadow-sm border border-purple-800/30">
               <div className="flex items-center">
                 <div className="p-3 bg-gray-800 rounded-xl shadow-sm mr-4">
@@ -1387,8 +1438,8 @@ export default function TeamsManagement() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {teamsWithRanking.map((team) => (
-              <div 
-                key={team.id} 
+              <div
+                key={team.id}
                 className="group bg-gray-800 rounded-2xl shadow-xl border border-gray-700 overflow-hidden hover:shadow-3xl hover:border-indigo-600 transition-all duration-300 transform hover:-translate-y-1"
               >
                 <div className="p-6">
@@ -1396,15 +1447,14 @@ export default function TeamsManagement() {
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-3">
                         {team.score !== null && team.score !== undefined && (
-                          <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shadow-sm ${
-                            team.rank === 1 
-                              ? 'bg-gradient-to-br from-yellow-400 to-amber-500 text-white' 
-                              : team.rank === 2
+                          <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shadow-sm ${team.rank === 1
+                            ? 'bg-gradient-to-br from-yellow-400 to-amber-500 text-white'
+                            : team.rank === 2
                               ? 'bg-gradient-to-br from-gray-300 to-gray-400 text-gray-800'
                               : team.rank === 3
-                              ? 'bg-gradient-to-br from-amber-600 to-amber-700 text-white'
-                              : 'bg-gradient-to-br from-indigo-500 to-purple-600 from-indigo-600 to-purple-700 text-white'
-                          }`}>
+                                ? 'bg-gradient-to-br from-amber-600 to-amber-700 text-white'
+                                : 'bg-gradient-to-br from-indigo-500 to-purple-600 from-indigo-600 to-purple-700 text-white'
+                            }`}>
                             {team.rank === 1 ? '🥇' : team.rank === 2 ? '🥈' : team.rank === 3 ? '🥉' : `#${team.rank}`}
                           </div>
                         )}
@@ -1430,13 +1480,13 @@ export default function TeamsManagement() {
                           </h3>
                         </div>
                       </div>
-                      
+
                       {team.description && (
                         <p className="text-gray-300 line-clamp-2 mb-4 leading-relaxed">
                           {team.description}
                         </p>
                       )}
-                      
+
                       {editingScoreTeamId === team.id ? (
                         <div className="mb-4">
                           <div className="mb-2 text-xs text-gray-400">
@@ -1514,22 +1564,22 @@ export default function TeamsManagement() {
                           </div>
                         </div>
                       )}
-                      
+
                       <div className="flex flex-wrap items-center gap-3 mb-4">
                         <div className="flex items-center text-sm text-gray-400">
                           <svg className="mr-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
-                          {new Date(team.created_at).toLocaleDateString('en-US', { 
-                            month: 'short', 
-                            day: 'numeric', 
-                            year: 'numeric' 
+                          {new Date(team.created_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
                           })}
                         </div>
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="pt-4 border-t border-gray-700 mt-4">
                     <div className="flex items-center justify-between">
                       <button
@@ -1541,7 +1591,7 @@ export default function TeamsManagement() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                         </svg>
                       </button>
-                      
+
                       <div className="flex items-center space-x-2">
                         <button
                           onClick={() => handleEdit(team)}
